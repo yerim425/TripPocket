@@ -48,8 +48,6 @@ public class TouristFragment extends BaseFragment {
         tourAdapter = new TourAdapter(getContext(), tourItems);
         recyclerView.setAdapter(tourAdapter);
 
-        //((MainActivity)getActivity()).loadContentData(getString(R.string.tourist));
-
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 
             @Override

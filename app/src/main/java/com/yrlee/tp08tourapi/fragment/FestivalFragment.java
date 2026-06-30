@@ -34,7 +34,6 @@ public class FestivalFragment extends BaseFragment {
         recyclerView = view.findViewById(R.id.recycler_view);
         tourAdapter = new TourAdapter(getContext(), tourItems);
         recyclerView.setAdapter(tourAdapter);
-        ((MainActivity)getActivity()).loadContentData(getString(R.string.festival));
 
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
 
