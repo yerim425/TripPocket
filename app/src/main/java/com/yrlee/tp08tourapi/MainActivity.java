@@ -123,10 +123,10 @@ public class MainActivity extends AppCompatActivity {
         actvArea = (AutoCompleteTextView) inputLayoutArea.getEditText(); // AutoCompleteTextView extends EditText
         areaAdapter = new ArrayAdapter(this, R.layout.recycler_area_item, new ArrayList<String>());
         actvArea.setAdapter(areaAdapter);
+        areaAdapter.addAll(Constants.SIDO_MAP.keySet());
         inputLayoutArea.requestFocus();
         actvArea.setText("서울", false);
         actvArea.dismissDropDown();
-        areaAdapter.addAll(Constants.SIDO_MAP.keySet());
 
         // 상세 지역 리스트 가져오기
         inputLayoutAreaDetail = findViewById(R.id.input_layout_detail);
