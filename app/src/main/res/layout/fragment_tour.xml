@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".fragment.TouristFragment"
+    tools:context=".fragment.TourFragment"
     android:orientation="vertical">
 
     <androidx.recyclerview.widget.RecyclerView
@@ -15,15 +15,5 @@
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         app:spanCount="2" />
 
-    <TextView
-        android:id="@+id/tv_no_data"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/no_data"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:textSize="16sp"
-        android:layout_gravity="center"
-        android:visibility="gone"/>
 
 </FrameLayout>
