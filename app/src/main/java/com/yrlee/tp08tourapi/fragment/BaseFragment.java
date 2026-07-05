@@ -1,5 +1,6 @@
 package com.yrlee.tp08tourapi.fragment;
 
+import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
 import android.widget.TextView;
@@ -21,9 +22,7 @@ public class BaseFragment extends Fragment {
 
     public void addItems(ArrayList<TourItem> items){
         int size = tourItems.size();
-        if(items.isEmpty() && size == 0){
-            tvNoData.setVisibility(VISIBLE);
-        }else{
+        if(!items.isEmpty()){
             tourItems.addAll(items);
             tourAdapter.notifyItemRangeChanged(size, items.size());
         }

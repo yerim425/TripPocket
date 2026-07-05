@@ -73,7 +73,11 @@ public class TouristFragment extends BaseFragment {
                 }
             }
         });
-
         tvNoData = view.findViewById(R.id.tv_no_data);
+        if(tourItems.isEmpty()){
+            tvNoData.setVisibility(VISIBLE);
+        }else{
+            tvNoData.setVisibility(INVISIBLE);
+        }
     }
 }

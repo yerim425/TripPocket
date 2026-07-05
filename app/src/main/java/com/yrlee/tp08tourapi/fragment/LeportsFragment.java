@@ -1,5 +1,8 @@
 package com.yrlee.tp08tourapi.fragment;
 
+import static android.view.View.INVISIBLE;
+import static android.view.View.VISIBLE;
+
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -60,5 +63,11 @@ public class LeportsFragment extends BaseFragment {
                 }
             }
         });
+        tvNoData = view.findViewById(R.id.tv_no_data);
+        if(tourItems.isEmpty()){
+            tvNoData.setVisibility(VISIBLE);
+        }else{
+            tvNoData.setVisibility(INVISIBLE);
+        }
     }
 }
