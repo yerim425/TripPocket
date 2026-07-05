@@ -30,57 +30,6 @@
                 android:layout_height="match_parent"
                 android:background="@drawable/bg_gradient"/>
 
-            <!-- 장소명 -->
-<!--            <LinearLayout-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:orientation="vertical"-->
-<!--                android:layout_gravity="center"-->
-<!--                android:gravity="center"-->
-<!--                >-->
-<!--                <TextView-->
-<!--                    android:id="@+id/tvTitle"-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:text="둘리뮤지엄"-->
-<!--                    android:textColor="@color/white"-->
-<!--                    android:textSize="24sp"-->
-<!--                    android:textStyle="bold"-->
-<!--                    android:layout_gravity="center"-->
-<!--                    />-->
-<!--                <LinearLayout-->
-<!--                    android:layout_width="wrap_content"-->
-<!--                    android:layout_height="wrap_content"-->
-<!--                    android:orientation="horizontal"-->
-<!--                    android:layout_gravity="center"-->
-<!--                    android:layout_marginTop="40dp">-->
-<!--                    <TextView-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="관광지"-->
-<!--                        android:textColor="@color/white"-->
-<!--                        android:textStyle="bold"-->
-<!--                        android:textSize="14sp"-->
-<!--                        android:paddingHorizontal="8dp"/>-->
-<!--                    <TextView-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="|"-->
-<!--                        android:textColor="@color/white"-->
-<!--                        android:textStyle="bold"-->
-<!--                        android:textSize="14sp"-->
-<!--                        android:paddingHorizontal="8dp"/>-->
-<!--                    <TextView-->
-<!--                        android:layout_width="wrap_content"-->
-<!--                        android:layout_height="wrap_content"-->
-<!--                        android:text="서울시 도봉구"-->
-<!--                        android:textColor="@color/white"-->
-<!--                        android:textStyle="bold"-->
-<!--                        android:textSize="14sp"-->
-<!--                        android:paddingHorizontal="8dp"/>-->
-<!--                </LinearLayout>-->
-
-<!--            </LinearLayout>-->
             <!-- 뒤로가기 -->
             <ImageView
                 android:id="@+id/btnBack"
@@ -106,6 +55,7 @@
             android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/layout_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
@@ -146,8 +96,10 @@
                     android:background="@color/line"
                     />
             </LinearLayout>
+
+            <!-- 12:관광지, 14:문화시설, 28:레포츠 -->
             <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/layout_address"
+                android:id="@+id/layout_basic"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 >
@@ -185,8 +137,21 @@
                     android:layout_marginTop="8dp"/>
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <!-- 15:축제 -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/layout_festival"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <!-- 25:여행코스 -->
+            <LinearLayout
+                android:id="@+id/layout_recommend"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+            </LinearLayout>
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>

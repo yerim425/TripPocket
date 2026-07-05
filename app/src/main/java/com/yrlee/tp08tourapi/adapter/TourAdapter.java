@@ -87,7 +87,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
         holder.layout.setOnClickListener( v-> {
             Intent intent = new Intent(context, TourDetailActivity.class);
                     intent.putExtra("contentId", item.contentId);
-                    intent.putExtra("contentTypeId", item.contentTypeId);
+//                    intent.putExtra("contentTypeId", item.contentTypeId);
             context.startActivity(intent);
 //            ((MainActivity) context).openKakaoMap(item.title, item.mapy, item.mapx);
             }
