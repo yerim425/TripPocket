@@ -278,15 +278,12 @@ public class MainActivity extends AppCompatActivity {
                                 } else if (tagName.equals("firstimage")) {
                                     xpp.next();
                                     item.firstImage = xpp.getText();
-                                } else if (tagName.equals("firstimage2")) {
-                                    xpp.next();
-                                    item.firstImage2 = xpp.getText();
                                 } else if (tagName.equals("tel")) {
                                     xpp.next();
                                     item.tel = xpp.getText();
-                                } else if (tagName.equals("cat1")) {
+                                } else if (tagName.equals("lclsSystm1")) {
                                     xpp.next();
-                                    item.cat1 = xpp.getText();
+                                    item.lclsSystm1 = xpp.getText();
                                 } else if (tagName.equals("mapx")) {
                                     xpp.next();
                                     item.mapx = xpp.getText();
@@ -381,22 +378,6 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    public void openKakaoMap(String title, String latitude, String longitude) {
 
-        if(latitude == null || longitude == null){
-            Toast.makeText(this, "위경도가 옳바르지 않습니다.", Toast.LENGTH_SHORT).show();
-        }
-
-        String url = "kakaomap://look?p=" + latitude + "," + longitude;
-
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-        intent.setPackage("net.daum.android.map");
-
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            startActivity(intent);
-        } else {
-            Toast.makeText(this, "카카오맵이 설치되어 있지 않습니다.", Toast.LENGTH_SHORT).show();
-        }
-    }
 
 }

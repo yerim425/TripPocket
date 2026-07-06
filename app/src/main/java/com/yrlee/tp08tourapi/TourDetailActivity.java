@@ -1,37 +1,49 @@
 package com.yrlee.tp08tourapi;
 
+import static android.view.View.GONE;
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
 import static com.yrlee.tp08tourapi.BuildConfig.API_KEY;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
+import com.facebook.shimmer.ShimmerFrameLayout;
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.yrlee.tp08tourapi.adapter.ImagePagerAdapter;
+import com.yrlee.tp08tourapi.adapter.TourDetailAdapter;
+import com.yrlee.tp08tourapi.data.TourDetailIntro;
+import com.yrlee.tp08tourapi.data.TourDetailIntroItem;
 import com.yrlee.tp08tourapi.data.TourDetailItem;
+import com.yrlee.tp08tourapi.data.TourDetailRecommendItem;
 import com.yrlee.tp08tourapi.data.TourItem;
 import com.yrlee.tp08tourapi.util.Constants;
 import com.yrlee.tp08tourapi.util.XmlParserUtil;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,20 +56,25 @@ public class TourDetailActivity extends AppCompatActivity {
     // ui
     private TextView tvFailLoadData;
     private TextView tvTitle;
+    private TextView tvTags;
+    private LinearLayout layoutAddress;
+    private TextView tvAddress;
+    private TextView tvSubAddress;
+    private TextView tvOverview;
+    private RecyclerView recyclerview;
+    private ShimmerFrameLayout shimmerFrameLayout;
 
     // progress bar
     private ProgressBar progressBar;
     private boolean isLoading = false;
 
-    // viewpager
-    private ImagePagerAdapter imagePagerAdapter;
+    // adapter
+    private ImagePagerAdapter imagePagerAdapter; // viewpager
+    private TourDetailAdapter tourDetailAdapter;
 
-    // 상세정보 객체
-    private TourDetailItem tourItem;
-
+    // url 관련
     String BASE_URL = "https://apis.data.go.kr/B551011/KorService2/";
     String BASE_TYPE = "?&serviceKey=" + API_KEY + "&MobileOS=AND&MobileApp=TripPocket&_type=xml";
-
     private String detailAddr; // 상세정보 조회
     private String detailRequestKeyword = "detailCommon2";
     private String introAddr; // 소개정보 조회
@@ -65,9 +82,11 @@ public class TourDetailActivity extends AppCompatActivity {
     private String repeatAddr; // 반복정보 조회 - 여행코스
     private String repeatRequestKeyword = "detailInfo2";
 
+    // 상세정보 객체
+    private TourDetailItem tourItem;
 
     // 스레드를 여러개 생성하는 것을 방지
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,26 +103,39 @@ public class TourDetailActivity extends AppCompatActivity {
         tvFailLoadData = findViewById(R.id.tv_fail_load_data);
         progressBar = findViewById(R.id.progressbar);
         tvTitle = findViewById(R.id.tvTitle);
+        tvTags = findViewById(R.id.tv_tags);
+        layoutAddress = findViewById(R.id.layout_address);
+        tvAddress = findViewById(R.id.tv_address);
+        tvSubAddress = findViewById(R.id.tv_sub_address);
+        recyclerview = findViewById(R.id.recyclerview);
+        tvOverview = findViewById(R.id.tv_overview);
+        shimmerFrameLayout = findViewById(R.id.shimmer_layout);
 
-        // viewpager
-        imagePagerAdapter = new ImagePagerAdapter(null);
-
+        // contentId 확인 후 tour 데이터 요청
         contentId = getIntent().getStringExtra("contentId");
-//        contentTypeId = getIntent().getStringExtra("contentTypeId");
+
         if (contentId == null || contentId.isEmpty()) {
             tvFailLoadData.setVisibility(VISIBLE);
         } else {
             tourItem = new TourDetailItem(contentId);
             Log.d("here", "contentId: " + contentId);
 
-            loadContentData();
+            loadCommonData();
         }
 
+        // 뒤로가기
+        findViewById(R.id.iv_back).setOnClickListener(v -> {
+            finish();
+        });
 
+        // 카카오맵 가기
+        layoutAddress.setOnClickListener(v -> {
+            openKakaoMap(tourItem.mapy, tourItem.mapx);
+        });
     }
 
-    // 1번 api 호출 - 기본 상세 정보 조회
-    public void loadContentData() {
+    // 1. 공통 정보 조회
+    public void loadCommonData() {
         setLoading(true);
 
         executor.execute(() -> {
@@ -116,58 +148,21 @@ public class TourDetailActivity extends AppCompatActivity {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            runOnUiThread(() -> {
-                if (isFinishing() || isDestroyed()) return;
-                // ui 반영
-                // 제목
-                tvTitle.setText(tourItem.title);
 
-                // 메인 이미지
-                ArrayList<String> imageList = new ArrayList<>();
-                imageList.add(tourItem.firstImage);
-                if(!tourItem.firstImage2.isEmpty()) imageList.add(tourItem.firstImage2);
-                ViewPager2 viewPager = findViewById(R.id.viewPager);
-                imagePagerAdapter.setImageList(imageList);
-                viewPager.setAdapter(imagePagerAdapter);
-            });
-        });
+            runOnUiThread(this::updateCommonUI);
 
-        // 2번 api 호출 - 상세 소개 정보 조회
-        executor.execute(()->{
-            Log.d("here", "contentTypeId: " + tourItem.contentTypeId);
-            introAddr = BASE_URL + introRequestKeyword + BASE_TYPE
-                    + "&contentId=" + tourItem.contentId
-                    + "&contentTypeId=" + tourItem.contentTypeId;
+            // 상세 소개 정보 조회
+            loadIntroData();
 
-            try {
-                XmlPullParser xpp = XmlParserUtil.getParser(detailAddr);
-                introParse(xpp);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            // 여행코스 리스트 조회
+            if ("25".equals(tourItem.contentTypeId)) {
+                loadRepeatData();
             }
-
-            // ui
-            runOnUiThread(()->{
-                if(Objects.equals(tourItem.contentTypeId, "15")){ // 축제
-
-                }else if (Objects.equals(tourItem.contentTypeId, "25")){ // 여행코스
-
-                }else{ // 관광지, 문화시설, 레포츠
-
-                }
-            });
-
         });
-
-        // 3번째 api 호출 - 반복 정보 조회 -> 여행코스 리스트 조회
-        if(Objects.equals(tourItem.contentTypeId, "25")){
-
-        }
-
-        setLoading(false);
     }
 
-    // 기본 상세 정보 xml 문서 파싱
+
+    // 1.1 공통 정보 xml 문서 파싱
     private void detailParse(XmlPullParser xpp) throws XmlPullParserException, IOException {
         int eventType = xpp.getEventType();
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -189,9 +184,6 @@ public class TourDetailActivity extends AppCompatActivity {
                     } else if (tagName.equals("firstimage")) {
                         xpp.next();
                         tourItem.firstImage = xpp.getText();
-                    } else if (tagName.equals("firstimage2")) {
-                        xpp.next();
-                        tourItem.firstImage2 = xpp.getText();
                     } else if (tagName.equals("addr1")) {
                         xpp.next();
                         tourItem.addr1 = xpp.getText();
@@ -204,9 +196,18 @@ public class TourDetailActivity extends AppCompatActivity {
                     } else if (tagName.equals("mapy")) {
                         xpp.next();
                         tourItem.mapy = xpp.getText();
+                    } else if (tagName.equals("lclsSystm1")) {
+                        xpp.next();
+                        tourItem.lclsSystm1 = xpp.getText();
+                    } else if (tagName.equals("lclsSystm2")) {
+                        xpp.next();
+                        tourItem.lclsSystm2 = xpp.getText();
+                    } else if (tagName.equals("lclsSystm3")) {
+                        xpp.next();
+                        tourItem.lclsSystm3 = xpp.getText();
                     } else if (tagName.equals("overview")) {
                         xpp.next();
-                        tourItem.overview = xpp.getText();
+                        tourItem.overview = xpp.getText().replace(". ", ".\n\n");
                     }
                     break;
                 case XmlPullParser.END_TAG:
@@ -215,50 +216,116 @@ public class TourDetailActivity extends AppCompatActivity {
         }
     }
 
-    // 소개 상세 정보 xml 파싱
+    // 1.2 공통 정보 조회 - ui 업데이트
+    private void updateCommonUI() {
+        if (isFinishing() || isDestroyed()) return;
+        // ui 반영
+        // 제목
+        tvTitle.setText(tourItem.title);
+
+        // 메인 이미지
+        // viewpager
+        ArrayList<String> imageList = new ArrayList<>();
+        imageList.add(tourItem.firstImage);
+        ViewPager2 viewPager = findViewById(R.id.viewPager);
+        imagePagerAdapter = new ImagePagerAdapter(imageList);
+        viewPager.setAdapter(imagePagerAdapter);
+
+        tvOverview.setText(tourItem.overview.replaceAll("<br\\s*/?>", "\n"));
+
+        // layout visible
+        if (Objects.equals(tourItem.contentTypeId, "25")) {
+            layoutAddress.setVisibility(GONE);
+        } else {
+            layoutAddress.setVisibility(VISIBLE);
+            tvAddress.setText((tourItem.addr1));
+            if (tourItem.addr2 != null) {
+                tvSubAddress.setVisibility(VISIBLE);
+                tvSubAddress.setText(tourItem.addr2);
+            }
+        }
+
+        // tags
+        StringBuilder sb = new StringBuilder();
+        String cat1 = Constants.CATEGORY1_MAP.get(tourItem.lclsSystm1);
+        if (cat1 != null) sb.append(cat1);
+
+        if ("25".equals(tourItem.contentTypeId)) { // 여행코스
+            // address
+            layoutAddress.setVisibility(GONE);
+
+            // tags
+            String cat2 = Constants.CATEGORY2_MAP.get(tourItem.lclsSystm1).get(tourItem.lclsSystm2);
+            if (cat2 != null) sb.append(" > ").append(cat2);
+
+        } else {
+            // address
+            layoutAddress.setVisibility(VISIBLE);
+            tvAddress.setText((tourItem.addr1));
+            if (tourItem.addr2 != null) {
+                tvSubAddress.setVisibility(VISIBLE);
+                tvSubAddress.setText(tourItem.addr2);
+            }
+
+            // tags
+            if (!"AC".equals(tourItem.lclsSystm1)
+                    && !"FD".equals(tourItem.lclsSystm1)
+                    && !"SH".equals(tourItem.lclsSystm1)) {
+
+                Map<String, String> cat2Map = Constants.CATEGORY2_MAP.get(tourItem.lclsSystm1);
+                String cat2 = cat2Map != null ? cat2Map.get(tourItem.lclsSystm2) : null;
+
+                Map<String, String> cat3Map = Constants.CATEGORY3_MAP.get(tourItem.lclsSystm2);
+                String cat3 = cat3Map != null ? cat3Map.get(tourItem.lclsSystm3) : null;
+
+                if (cat2 != null) {
+                    sb.append(" > ").append(cat2);
+                }
+
+                if (cat3 != null && !cat3.equals(cat2)) {
+                    sb.append(" > ").append(cat3);
+                }
+            }
+        }
+        tvTags.setText(sb.toString());
+
+        setLoading(false);
+    }
+
+    // 2. 소개 정보 조회
+    public void loadIntroData() {
+        runOnUiThread(() -> {
+            shimmerFrameLayout.setVisibility(VISIBLE);
+            shimmerFrameLayout.startShimmer();
+            recyclerview.setVisibility(GONE);
+        });
+        executor.execute(() -> {
+
+            Log.d("here", "contentTypeId: " + tourItem.contentTypeId);
+            introAddr = BASE_URL + introRequestKeyword + BASE_TYPE
+                    + "&contentId=" + tourItem.contentId
+                    + "&contentTypeId=" + tourItem.contentTypeId;
+            Log.d("here", "intro url: " + introAddr);
+
+            try {
+                XmlPullParser xpp = XmlParserUtil.getParser(introAddr);
+                introParse(xpp);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            // ui
+
+            runOnUiThread(this::updateIntroUI);
+        });
+
+    }
+
+    // 2.1 소개 상세 정보 xml 파싱
     private void introParse(XmlPullParser xpp) throws XmlPullParserException, IOException {
 
         int eventType = xpp.getEventType();
-        if(Objects.equals(tourItem.contentTypeId, "15")){ // 축제 정보
-            //주최자정보, 주최자연락처, 행사시작일, 행사종료일, 공연시간, 행사장소, 이용요금
-            TourDetailItem.FestivalData fesData = new TourDetailItem.FestivalData();
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                switch (eventType) {
-                    case XmlPullParser.START_DOCUMENT:
-                        break;
-                    case XmlPullParser.START_TAG:
-                        String tagName = xpp.getName();
-                        if (tagName.equals("sponsor1")) {
-                            xpp.next();
-                            fesData.sponsor1 = xpp.getText();
-                        } else if (tagName.equals("sponsor1tel")) {
-                            xpp.next();
-                            fesData.sponsor1tel = xpp.getText();
-                        } else if (tagName.equals("eventstartdate")) {
-                            xpp.next();
-                            fesData.eventStartDate = xpp.getText();
-                        } else if (tagName.equals("eventenddate")) {
-                            xpp.next();
-                            fesData.eventEndDate = xpp.getText();
-                        } else if (tagName.equals("eventplace")) {
-                            xpp.next();
-                            fesData.eventPlace = xpp.getText();
-                        } else if (tagName.equals("playtime")) {
-                            xpp.next();
-                            fesData.playTime = xpp.getText();
-                        }else if (tagName.equals("usetimefestival")) {
-                            xpp.next();
-                            fesData.useTimeFestival = xpp.getText();
-                        }
-                        break;
-                    case XmlPullParser.END_TAG:
-                }
-                eventType = xpp.next();
-            }
-            tourItem.fesData = fesData;
-        }
-        else if(Objects.equals(tourItem.contentTypeId, "25")) {// 여행코스 정보
-            TourDetailItem.RecommendData recommendData = new TourDetailItem.RecommendData();
+        if ("25".equals(tourItem.contentTypeId)) {// 여행코스 정보
             // 코스 총 소요시간 데이터 가져오기
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 switch (eventType) {
@@ -268,55 +335,218 @@ public class TourDetailActivity extends AppCompatActivity {
                         String tagName = xpp.getName();
                         if (tagName.equals("taketime")) {
                             xpp.next();
-                            recommendData.takeTime = xpp.getText();
+                            tourItem.takeTime = xpp.getText();
                         }
                         break;
                     case XmlPullParser.END_TAG:
                 }
                 eventType = xpp.next();
             }
-            tourItem.recommendData = recommendData;
 
-        }else{ // 관광지, 문화시설, 레포츠
-            //이용요금, 이용시간, 주차시설, 주차요금, 문의 및 안내, 쉬는날
-            TourDetailItem.IntroData introData = new TourDetailItem.IntroData();
+        } else { // 관광지, 문화시설, 레포츠, 축제 정보
+            // 관광지, 문화시설, 레포츠 정보 : 이용 요금, 이용시설, 주차시설, 주차요금, 문의및안내, 쉬는날
+            // 축제 정보 : 주최자정보, 주최자연락처, 행사시작일, 행사종료일, 공연시간, 행사장소, 이용요금
+            List<TourDetailIntroItem> introList = new ArrayList<>();
+            // 행사시작일, 종료일
+            String eventStartDate = "", eventEndDate = "";
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 switch (eventType) {
                     case XmlPullParser.START_DOCUMENT:
                         break;
                     case XmlPullParser.START_TAG:
                         String tagName = xpp.getName();
+
                         if (tagName.contains("usefee")) {
-                            xpp.next();
-                            introData.useFee = xpp.getText();
+                            addIfNotEmpty(introList, xpp, "usefee");
+
                         } else if (tagName.contains("usetime")) {
-                            xpp.next();
-                            introData.useTime = xpp.getText();
-                        } else if (tagName.contains("parking")) {
-                            xpp.next();
-                            introData.parking = xpp.getText();
+                            addIfNotEmpty(introList, xpp, "usetime");
+
                         } else if (tagName.contains("parkingfee")) {
-                            xpp.next();
-                            introData.parkingFee = xpp.getText();
+                            addIfNotEmpty(introList, xpp, "parkingfee");
+
+                        } else if (tagName.equals("parking")) {
+                            addIfNotEmpty(introList, xpp, "parking");
+
                         } else if (tagName.contains("infocenter")) {
-                            xpp.next();
-                            introData.infoCenter = xpp.getText();
+                            addIfNotEmpty(introList, xpp, "infocenter");
+
                         } else if (tagName.contains("restdate")) {
+                            addIfNotEmpty(introList, xpp, "restdate");
+
+                        } else if (tagName.equals("sponsor1")) {
+                            addIfNotEmpty(introList, xpp, "sponsor1");
+
+                        } else if (tagName.equals("eventplace")) {
+                            addIfNotEmpty(introList, xpp, "eventplace");
+
+                        } else if (tagName.equals("playtime")) {
+                            addIfNotEmpty(introList, xpp, "playtime");
+
+                        } else if (tagName.equals("eventstartdate")) {
                             xpp.next();
-                            introData.restDate = xpp.getText();
+                            eventStartDate = formatDate(xpp.getText());
+
+                        } else if (tagName.equals("eventenddate")) {
+                            xpp.next();
+                            eventEndDate = formatDate(xpp.getText());
                         }
                         break;
                     case XmlPullParser.END_TAG:
                 }
                 eventType = xpp.next();
             }
-            tourItem.introData = introData;
+            if (eventStartDate != null && !eventStartDate.isEmpty()) {
+                String str = eventStartDate;
+                if (eventEndDate != null && !eventEndDate.isEmpty()) {
+                    str += " ~ " + eventEndDate;
+                }
+                introList.add(new TourDetailIntroItem("eventdate", str));
+            }
+            tourItem.introList = introList;
         }
+    }
+
+    // 2.2 소개 정보 조회 - ui 업데이트
+    private void updateIntroUI() {
+        if ("25".equals(tourItem.contentTypeId)) { // 여행코스
+            if (tourItem.takeTime != null) {
+                String tags = tvTags.getText() + "\n소요시간 " + tourItem.takeTime;
+                tvTags.setText(tags);
+            }
+        } else {
+
+            tourDetailAdapter = new TourDetailAdapter(this, tourItem);
+            recyclerview.setAdapter(tourDetailAdapter);
+
+            shimmerFrameLayout.stopShimmer();
+            shimmerFrameLayout.setVisibility(GONE);
+            recyclerview.setVisibility(VISIBLE);
+        }
+    }
+
+    // 3. 반복 정보 조회 - 여행코스
+    public void loadRepeatData() {
+        runOnUiThread(() -> {
+            shimmerFrameLayout.setVisibility(VISIBLE);
+            shimmerFrameLayout.startShimmer();
+            recyclerview.setVisibility(GONE);
+        });
+        executor.execute(() -> {
+
+            Log.d("here", "contentTypeId: " + tourItem.contentTypeId);
+            repeatAddr = BASE_URL + repeatRequestKeyword + BASE_TYPE
+                    + "&contentId=" + tourItem.contentId
+                    + "&contentTypeId=" + tourItem.contentTypeId;
+            Log.d("here", "repeat url: " + repeatAddr);
+
+            try {
+                XmlPullParser xpp = XmlParserUtil.getParser(repeatAddr);
+                repeatParse(xpp);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            // ui
+
+            runOnUiThread(this::updateRepeatUI);
+        });
+    }
+
+    // 3.1 반복 정보 조회 parseing
+    private void repeatParse(XmlPullParser xpp) throws XmlPullParserException, IOException {
+        int eventType = xpp.getEventType();
+        // contentId, 장소이름, 소개, image url
+        List<TourDetailRecommendItem> recommendList = new ArrayList<>();
+        TourDetailRecommendItem item = null;
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            switch (eventType) {
+                case XmlPullParser.START_DOCUMENT:
+                    break;
+                case XmlPullParser.START_TAG:
+                    String tagName = xpp.getName();
+                    if(tagName.contains("item")){
+                        xpp.next();
+                        item = new TourDetailRecommendItem();
+                    }else if (tagName.contains("subcontentid")) {
+                        xpp.next();
+                        Log.d("here", "id: " + xpp.getText());
+                        item.id = xpp.getText();
+                    } else if (tagName.contains("subname")) {
+                        xpp.next();
+                        item.title = xpp.getText();
+                    } else if (tagName.contains("subdetailoverview")) {
+                        xpp.next();
+                        item.overview = xpp.getText();
+                    } else if (tagName.equals("subdetailimg")) {
+                        xpp.next();
+                        item.image = xpp.getText();
+                    }
+                    break;
+                case XmlPullParser.END_TAG:
+                    String tagNames = xpp.getName();
+                    if (tagNames.equals("item")) recommendList.add(item);
+            }
+            eventType = xpp.next();
+        }
+        tourItem.recommendList = recommendList;
+    }
+
+    // 3.2 반복 정보 조회 - ui 업데이트
+    private void updateRepeatUI() {
+        tourDetailAdapter = new TourDetailAdapter(this, tourItem);
+        recyclerview.setAdapter(tourDetailAdapter);
+
+        shimmerFrameLayout.stopShimmer();
+        shimmerFrameLayout.setVisibility(GONE);
+        recyclerview.setVisibility(VISIBLE);
     }
 
     private void setLoading(Boolean loading) {
         isLoading = loading;
         progressBar.setVisibility(isLoading ? VISIBLE : INVISIBLE);
 
+    }
+
+    // 값이 있는지 확인 후 추가
+    private void addIfNotEmpty(List<TourDetailIntroItem> list,
+                               XmlPullParser xpp,
+                               String title) throws IOException, XmlPullParserException {
+
+        xpp.next();
+        String text = xpp.getText();
+
+        if (text != null && !text.trim().isEmpty()) {
+            list.add(new TourDetailIntroItem(title, text));
+        }
+    }
+
+    // 날짜 변환 함수
+    private String formatDate(String date) {
+        if (date == null || date.length() != 8) {
+            return date;
+        }
+        return date.substring(0, 4) + "."
+                + date.substring(4, 6) + "."
+                + date.substring(6, 8);
+    }
+
+    // 카카오맵 가기
+    public void openKakaoMap(String latitude, String longitude) {
+
+        if (latitude == null || longitude == null) {
+            Toast.makeText(this, "위경도가 옳바르지 않습니다.", Toast.LENGTH_SHORT).show();
+        }
+
+        String url = "kakaomap://look?p=" + latitude + "," + longitude;
+
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        intent.setPackage("net.daum.android.map");
+
+        if (intent.resolveActivity(getPackageManager()) != null) {
+            startActivity(intent);
+        } else {
+            Toast.makeText(this, "카카오맵이 설치되어 있지 않습니다.", Toast.LENGTH_SHORT).show();
+        }
     }
 }

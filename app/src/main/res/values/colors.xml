@@ -4,7 +4,8 @@
     <color name="white">#FFFFFFFF</color>
     <color name="blue">#FF8888FF</color>
     <color name="hint_gray">#FFdddddd</color>
-    <color name="text_gray">#FF888888</color>
+    <color name="text_gray">#737373</color>
+    <color name="icon_gray">#5D5D5D</color>
     <color name="tab_unselected">#FF888888</color>
     <color name="beige">#FFE9C9</color>
     <color name="bg_blue">#CECEFF</color>

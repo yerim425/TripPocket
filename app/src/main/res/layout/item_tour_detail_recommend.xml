@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    >
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="8dp"
+        android:layout_marginVertical="8dp"
+        android:layout_marginHorizontal="16dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ImageView
+                    android:id="@+id/iv_image"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerCrop"
+                    android:background="@color/line"
+                    android:src="@drawable/img_no_supported"/>
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_gradient"/>
+                <TextView
+                    android:id="@+id/tv_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1. 광화문"
+                    android:textColor="@color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:layout_gravity="end|bottom"
+                    android:padding="32dp"/>
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/tv_overview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="광화문 소개"
+                android:textColor="@color/text_gray"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingVertical="16dp"
+                android:gravity="center_vertical"
+                android:layout_marginHorizontal="16dp"/>
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <ImageView
+        android:id="@+id/iv_dot"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_dot_line"
+        app:tint="@color/blue"/>
+
+</LinearLayout>

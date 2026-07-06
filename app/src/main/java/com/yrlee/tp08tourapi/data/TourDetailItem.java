@@ -11,57 +11,30 @@ public class TourDetailItem {
     public String title;
     public String homePage="";
     public String firstImage="";
-    public String firstImage2="";
     public String addr1="";
     public String addr2="";
     public String mapx="";
     public String mapy="";
     public String overview="";
+    public String lclsSystm1; // 대분류(자연,문화시설, 축제 등)
 
-    public IntroData introData;
-    public FestivalData fesData;
-    public RecommendData recommendData;
+    public String lclsSystm2; // 중분류
+
+    public String lclsSystm3; // 소분류
+
+    public String takeTime; // 총 소요시간 - 여행코스
+
+
+    // 이거 안 쓸 수도 있음
+//    public TourDetailIntro intros;
+//    public TourDetailRecommend recommends;
+
+    public List<TourDetailIntroItem> introList;
+    public List<TourDetailRecommendItem> recommendList;
 
     public TourDetailItem(String id){
         this.contentId = id;
     }
 
-    // 소개정보 조회
-    public static class IntroData{
-        public String useFee; // 이용요금
-        public String useTime; // 이용시간
-        public String parking;  // 주차시설
-        public String parkingFee; // 주차요금
-        public String infoCenter; // 문의 및 안내
-        public String restDate; // 쉬는날
-
-    }
-
-    // 소개정보 조회 - 축제
-    public static class FestivalData{
-        public String sponsor1; // 주최자 정보
-        public String sponsor1tel; // 주최자 연락처
-        public String eventStartDate; // 행사 시작일
-        public String eventEndDate; // 행사 종료일
-        public String eventPlace; // 행사 장소
-        public String playTime; // 행사 시간
-        public String useTimeFestival; // 이용 요금
-    }
-
-    public static class RecommendData{
-        public String takeTime; // 코스 총 소요시간
-        public List<SubData> recommendList;
-
-        // 여행코스 내의 서브 장소 데이터
-        public class SubData{
-            public String subContentId;
-            public String subName;
-            public String subDetailOverview;
-            public String subDetailImage;
-
-        }
-    }
-
-
-
 }
+

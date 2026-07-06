@@ -1,18 +1,15 @@
 package com.yrlee.tp08tourapi.adapter;
 
 import static android.view.View.GONE;
-import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -20,10 +17,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.yrlee.tp08tourapi.MainActivity;
 import com.yrlee.tp08tourapi.R;
 import com.yrlee.tp08tourapi.TourDetailActivity;
-import com.yrlee.tp08tourapi.data.TourDetailItem;
 import com.yrlee.tp08tourapi.data.TourItem;
 import com.yrlee.tp08tourapi.room.BookmarkManager;
 import com.yrlee.tp08tourapi.room.BookmarkRepository;
@@ -68,7 +63,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
             holder.tvTel.setVisibility(VISIBLE);
             holder.tvTel.setText(item.tel);
         }
-        String category = Constants.CATEGORY_MAP.get(item.cat1);
+        String category = Constants.CATEGORY1_MAP.get(item.lclsSystm1);
         if(category!=null){
             holder.tvCategory.setVisibility(VISIBLE);
             holder.tvCategory.setText("#"+category);
@@ -89,7 +84,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
                     intent.putExtra("contentId", item.contentId);
 //                    intent.putExtra("contentTypeId", item.contentTypeId);
             context.startActivity(intent);
-//            ((MainActivity) context).openKakaoMap(item.title, item.mapy, item.mapx);
+//
             }
         );
 
@@ -112,7 +107,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
                 bt.firstImage = item.firstImage;
                 bt.mapx = item.mapx;
                 bt.mapy = item.mapy;
-                bt.cat1 = item.cat1;
+                bt.lclsSystm1 = item.lclsSystm1;
                 bt.tel = item.tel;
                 bookmarkRepository.insert(bt);
             }else{

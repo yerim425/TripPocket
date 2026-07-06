@@ -39,7 +39,7 @@ public class ImagePagerAdapter extends RecyclerView.Adapter<ImagePagerAdapter.VH
 
         Glide.with(holder.iv)
                 .load(imageList.get(position))
-                .placeholder(R.drawable.img_no_supported)
+                .placeholder(R.color.blue)
                 .into(holder.iv);
     }
 

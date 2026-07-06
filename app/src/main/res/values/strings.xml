@@ -19,4 +19,19 @@
     <string name="bookmark">북마크</string>
     <string name="no_bookmark">북마크한 장소가 없어요!</string>
     <string name="fail_load_data">정보를 불러오는데 실패했습니다.\n다시 시도해 주세요.</string>
+
+
+    <!-- 장소 상세 정보 관련 - 한글 전환 -->
+    <string name="usefee">이용요금</string>
+    <string name="usetime">이용시간</string>
+    <string name="parking">주차시설</string>
+    <string name="parkingfee">주차요금</string>
+    <string name="infocenter">문의</string>
+    <string name="restdate">휴무일</string>
+    <string name="sponsor1">주최자</string>
+    <string name="sponsor1tel">연락처</string>
+    <string name="eventdate">행사기간</string>
+    <string name="eventplace">행사장소</string>
+    <string name="playtime">행사시간</string>
+    <string name="usetimefestival">이용요금</string>
 </resources>
