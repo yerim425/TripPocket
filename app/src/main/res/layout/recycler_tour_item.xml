@@ -75,16 +75,18 @@
                 android:textSize="11sp"
                 android:drawableStart="@drawable/baseline_location_on_24"
                 android:drawablePadding="4dp"
+                android:drawableTint="@color/icon_gray"
                 android:maxLines="2"
                 android:ellipsize="end"/>
             <TextView
-                android:id="@+id/tv_tel"
+                android:id="@+id/tv_date"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="전화번호"
+                android:text="행사기간"
                 android:textSize="11sp"
                 android:layout_marginTop="8dp"
-                android:drawableStart="@drawable/baseline_phone_24"
+                android:drawableStart="@drawable/outline_access_time_filled_24"
+                android:drawableTint="@color/icon_gray"
                 android:drawablePadding="4dp" />
 
 

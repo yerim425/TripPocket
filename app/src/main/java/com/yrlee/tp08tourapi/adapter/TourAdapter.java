@@ -24,6 +24,7 @@ import com.yrlee.tp08tourapi.room.BookmarkManager;
 import com.yrlee.tp08tourapi.room.BookmarkRepository;
 import com.yrlee.tp08tourapi.room.BookmarkTour;
 import com.yrlee.tp08tourapi.util.Constants;
+import com.yrlee.tp08tourapi.util.DateUtil;
 
 import java.util.ArrayList;
 
@@ -55,13 +56,13 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
             holder.tvAddr.setText(item.addr2==null ? item.addr1 : item.addr1 + ' ' + item.addr2);
             holder.tvAddr.setVisibility(VISIBLE);
         }
-        if(item.tel==null) {
-            holder.tvTel.setVisibility(GONE);
-            holder.tvTel.setText("");
+        if(item.eventStartDate==null || item.eventStartDate.isEmpty()) {
+            holder.tvDate.setVisibility(GONE);
+            holder.tvDate.setText("");
         }
         else {
-            holder.tvTel.setVisibility(VISIBLE);
-            holder.tvTel.setText(item.tel);
+            holder.tvDate.setText(DateUtil.getEventDate(item.eventStartDate, item.eventEndDate));
+            holder.tvDate.setVisibility(VISIBLE);
         }
         String category = Constants.CATEGORY1_MAP.get(item.lclsSystm1);
         if(category!=null){
@@ -74,7 +75,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
         Glide.with(holder.itemView)
                 .load(item.firstImage)
                 .centerCrop()
-                .placeholder(R.drawable.img_search)
+                .placeholder(R.drawable.img_logo)
                 .into(holder.ivImage);
 
 
@@ -103,12 +104,11 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
                 bt.contentId = item.contentId;
                 bt.contentTypeId = item.contentTypeId;
                 bt.title = item.title;
-                bt.address = item.addr2 == null ? item.addr1 : item.addr1+" "+item.addr2;
+                bt.address = item.addr1;
                 bt.firstImage = item.firstImage;
                 bt.mapx = item.mapx;
                 bt.mapy = item.mapy;
                 bt.lclsSystm1 = item.lclsSystm1;
-                bt.tel = item.tel;
                 bookmarkRepository.insert(bt);
             }else{
                 bookmarkRepository.delete(item.contentId);
@@ -124,7 +124,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
 
     class VH extends RecyclerView.ViewHolder{
 
-        TextView tvTitle, tvAddr, tvTel, tvCategory;
+        TextView tvTitle, tvAddr, tvDate, tvCategory;
         ImageView ivImage;
         RelativeLayout layout;
 
@@ -133,7 +133,7 @@ public class TourAdapter extends RecyclerView.Adapter<TourAdapter.VH> {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvAddr = itemView.findViewById(R.id.tv_addr);
-            tvTel = itemView.findViewById(R.id.tv_tel);
+            tvDate = itemView.findViewById(R.id.tv_date);
             tvCategory = itemView.findViewById(R.id.tv_category);
             ivImage = itemView.findViewById(R.id.iv_first_image);
             layout = itemView.findViewById(R.id.layout_item);

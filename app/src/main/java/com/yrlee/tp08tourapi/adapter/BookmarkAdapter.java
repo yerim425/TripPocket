@@ -4,6 +4,7 @@ import static android.view.View.GONE;
 import static android.view.View.VISIBLE;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,11 +20,13 @@ import com.bumptech.glide.Glide;
 import com.yrlee.tp08tourapi.BookmarkActivity;
 import com.yrlee.tp08tourapi.MainActivity;
 import com.yrlee.tp08tourapi.R;
+import com.yrlee.tp08tourapi.TourDetailActivity;
 import com.yrlee.tp08tourapi.data.TourItem;
 import com.yrlee.tp08tourapi.room.BookmarkManager;
 import com.yrlee.tp08tourapi.room.BookmarkRepository;
 import com.yrlee.tp08tourapi.room.BookmarkTour;
 import com.yrlee.tp08tourapi.util.Constants;
+import com.yrlee.tp08tourapi.util.DateUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,13 +60,13 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.VH> {
             holder.tvAddr.setText(item.address);
             holder.tvAddr.setVisibility(VISIBLE);
         }
-        if(item.tel==null) {
-            holder.tvTel.setVisibility(GONE);
-            holder.tvTel.setText("");
-        }
-        else {
-            holder.tvTel.setVisibility(VISIBLE);
-            holder.tvTel.setText(item.tel);
+        if(item.eventStartDate==null || item.eventStartDate.isEmpty()) {
+            holder.tvDate.setVisibility(GONE);
+            holder.tvDate.setText("");
+        } else {
+            String date = DateUtil.getEventDate(item.eventStartDate, item.eventEndDate);
+            holder.tvDate.setVisibility(VISIBLE);
+            holder.tvDate.setText(date);
         }
         String category = Constants.CATEGORY1_MAP.get(item.lclsSystm1);
         if(category!=null){
@@ -82,7 +85,10 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.VH> {
 //        Log.d("adapter", "title: " + item.title + "mapy: "+item.mapy + "mapx: " + item.mapx);
 
         holder.layout.setOnClickListener( v-> {
-                ((BookmarkActivity) context).openKakaoMap(item.title, item.mapy, item.mapx);
+//                ((BookmarkActivity) context).openKakaoMap(item.title, item.mapy, item.mapx);
+                    Intent intent = new Intent(context, TourDetailActivity.class);
+                    intent.putExtra("contentId", item.contentId);
+                    context.startActivity(intent);
             }
         );
 
@@ -105,7 +111,8 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.VH> {
                 bt.mapx = item.mapx;
                 bt.mapy = item.mapy;
                 bt.lclsSystm1 = item.lclsSystm1;
-                bt.tel = item.tel;
+                bt.eventStartDate = item.eventStartDate;
+                bt.eventEndDate = item.eventEndDate;
                 bookmarkRepository.insert(bt);
             }else{
                 bookmarkRepository.delete(item.contentId);
@@ -131,7 +138,7 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.VH> {
     }
 
     class VH extends RecyclerView.ViewHolder{
-        TextView tvTitle, tvAddr, tvTel, tvCategory;
+        TextView tvTitle, tvAddr, tvDate, tvCategory;
         ImageView ivImage;
         RelativeLayout layout;
 
@@ -140,11 +147,12 @@ public class BookmarkAdapter extends RecyclerView.Adapter<BookmarkAdapter.VH> {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_title);
             tvAddr = itemView.findViewById(R.id.tv_addr);
-            tvTel = itemView.findViewById(R.id.tv_tel);
+            tvDate = itemView.findViewById(R.id.tv_date);
             tvCategory = itemView.findViewById(R.id.tv_category);
             ivImage = itemView.findViewById(R.id.iv_first_image);
             layout = itemView.findViewById(R.id.layout_item);
             cbBookmark = itemView.findViewById(R.id.cb_bookmark);
         }
     }
+
 }

@@ -16,6 +16,7 @@ public class BookmarkTour {
     public String mapx;
     public String mapy;
     public String lclsSystm1;
-    public String tel;
+    public String eventStartDate;
+    public String eventEndDate;
 
 }

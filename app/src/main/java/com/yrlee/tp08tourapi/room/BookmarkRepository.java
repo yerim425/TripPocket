@@ -7,6 +7,7 @@ import android.os.Looper;
 import java.util.List;
 import java.util.function.Consumer;
 
+// RoomDB에 요청하기 위한 북마크 레포지토리
 public class BookmarkRepository {
 
     private final BookmarkDao bookmarkDao;

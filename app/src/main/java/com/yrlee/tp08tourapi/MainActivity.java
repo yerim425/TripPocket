@@ -4,10 +4,7 @@ import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -15,7 +12,6 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,29 +25,36 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.yrlee.tp08tourapi.data.TourItem;
 import com.yrlee.tp08tourapi.fragment.TourFragment;
 import com.yrlee.tp08tourapi.room.AppDatabase;
-import com.yrlee.tp08tourapi.room.BookmarkCallback;
 import com.yrlee.tp08tourapi.room.BookmarkDao;
 import com.yrlee.tp08tourapi.util.Constants;
+import com.yrlee.tp08tourapi.util.XmlParserUtil;
 
 import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class MainActivity extends AppCompatActivity {
 
     //String BASE_URL = "https://apis.data.go.kr/B551011/KorService1/";
     String BASE_URL = "https://apis.data.go.kr/B551011/KorService2/";
-    String BASE_TYPE = "?MobileOS=AND&MobileApp=TripPocket&_type=xml";
+    String BASE_TYPE = "?MobileOS=AND&MobileApp=TripPocket&_type=xml&numOfRows=20&serviceKey=" + BuildConfig.API_KEY;
 //    String API_KEY = "oaEqMy4KQboCdSKksNqjpIiAUvGmfifILLU46GwXiQ3IhM9tVam1FEIlOQxM4stcJYI6LickRAyXqw0mKfPx%2FA%3D%3D";
-    String API_KEY = BuildConfig.API_KEY;
 
 
     // areaCode 관련 TextInputLayout
@@ -95,6 +98,8 @@ public class MainActivity extends AppCompatActivity {
     // 새로운 api 요청을 위한 식별 id
     private int requestId = 0;
 
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private Future<?> currentTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -214,145 +219,54 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void loadContentData(String contentTypeName) {
-        int currentRequestId = ++requestId;
+    private void loadContentData(String contentTypeName) {
+        final int currentRequestId = ++requestId;
+        // 이전 작업 취소
+        if (currentTask != null && !currentTask.isDone()) {
+            currentTask.cancel(true);
+        }
+        tvNoData.setVisibility(INVISIBLE);
         setLoading(true);
-        Thread t = new Thread() {
-            @Override
-            public void run() {
-
-                ArrayList<TourItem> tourItems = new ArrayList<>();
-                String areaCode = Constants.SIDO_MAP.get(actvArea.getText().toString());
-                String singunguCode = Objects.requireNonNull(Constants.SIGUNGU_MAP.get(areaCode)).get(actvAreaDetail.getText().toString());
-
-                String requestKeyWord = "areaBasedList2";
-                String address = BASE_URL + requestKeyWord + BASE_TYPE +
-                        "&arrange=O&serviceKey=" + API_KEY +
-                        "&contentTypeId=" + Constants.CONTENT_TYPE_MAP.get(contentTypeName) +
-                        "&areaCode=" + areaCode +
+        String contentTypeId = Constants.CONTENT_TYPE_MAP.get(contentTypeName);
+        Log.d("url", "contentTypeId: "+contentTypeId);
+        currentTask = executor.submit(() -> {
+            String areaCode = Constants.SIDO_MAP.get(actvArea.getText().toString());
+            String singunguCode = Objects.requireNonNull(Constants.SIGUNGU_MAP.get(areaCode)).get(actvAreaDetail.getText().toString());
+            String address;
+            if("15".equals(contentTypeId)){
+                String today = LocalDate.now()
+                        .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+                address = BASE_URL + "searchFestival2" + BASE_TYPE +
+                        "&lDongRegnCd=" + areaCode +
                         "&pageNo="+currentPage +
-                        "&numOfRows=20";
-
-                if(singunguCode != null)
-                    address += "&sigunguCode="+singunguCode;
-
-                Log.d("url", address);
-                try {
-                    URL url = new URL(address);
-                    InputStream is = url.openStream(); // 바이트 스트림
-                    InputStreamReader isr = new InputStreamReader(is); // 문자 스트림
-
-                    // Reader가 읽어들인 문자들을 xml 파일로 보고 분석해주는 분석가 객체 준비
-                    XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
-                    XmlPullParser xpp = factory.newPullParser();
-                    // 분석가에게 xml 데이터를 읽어오는 무지개 로드를 알려주기
-                    xpp.setInput(isr);
-                    // xpp를 이용하여 xml 문서를 분석 시작!!
-                    TourItem item = null;
-                    String[] itemSize = new String[3]; // 0:numOfRows, 1:pageNo, 2:totalCount
-                    int eventType = xpp.getEventType();
-                    while (eventType != XmlPullParser.END_DOCUMENT) {
-                        switch (eventType) {
-                            case XmlPullParser.START_DOCUMENT:
-                                break;
-                            case XmlPullParser.START_TAG:
-                                String tagName = xpp.getName();
-                                if (tagName.equals("item")) {
-                                    item = new TourItem();
-                                } else if (tagName.equals("addr1")) {
-                                    xpp.next();
-                                    item.addr1 = xpp.getText();
-                                } else if (tagName.equals("addr2")) {
-                                    xpp.next();
-                                    item.addr2 = xpp.getText();
-                                } else if (tagName.equals("contentid")) {
-                                    xpp.next();
-                                    item.contentId = xpp.getText();
-//                                    Log.d("mainactivity", item.contentId);
-                                } else if (tagName.equals("contenttypeid")) {
-                                    xpp.next();
-                                    item.contentTypeId = xpp.getText();
-                                } else if (tagName.equals("title")) {
-                                    xpp.next();
-                                    item.title = xpp.getText();
-                                } else if (tagName.equals("firstimage")) {
-                                    xpp.next();
-                                    item.firstImage = xpp.getText();
-                                } else if (tagName.equals("tel")) {
-                                    xpp.next();
-                                    item.tel = xpp.getText();
-                                } else if (tagName.equals("lclsSystm1")) {
-                                    xpp.next();
-                                    item.lclsSystm1 = xpp.getText();
-                                } else if (tagName.equals("mapx")) {
-                                    xpp.next();
-                                    item.mapx = xpp.getText();
-                                } else if (tagName.equals("mapy")) {
-                                    xpp.next();
-                                    item.mapy = xpp.getText();
-                                } else if(tagName.equals("numOfRows")){
-                                    xpp.next();
-                                    itemSize[0] = xpp.getText();
-                                } else if(tagName.equals("pageNo")){
-                                    xpp.next();
-                                    itemSize[1] = xpp.getText();
-                                } else if(tagName.equals("totalCount")){
-                                    xpp.next();
-                                    itemSize[2] = xpp.getText();
-                                }
-                                break;
-                            case XmlPullParser.END_TAG:
-                                String tagNames = xpp.getName();
-                                if (tagNames.equals("item")) tourItems.add(item);
-
-                        }
-                        eventType = xpp.next();
-                    }
-                    runOnUiThread(() -> {
-                        if(currentRequestId != requestId) return;
-                        if (isFinishing() || isDestroyed()) return;
-                       try{ // 화면에 아이템 개수 보이기
-                           int currentSize = Integer.parseInt(itemSize[0])*Integer.parseInt(itemSize[1]);
-                           int totalSize = Integer.parseInt(itemSize[2]);
-                           if(currentSize >= totalSize) isLastPage = true;
-                           tvItemCount.setText(currentSize + "/" + totalSize);
-                           tvItemCount.setVisibility(VISIBLE);
-
-                           if(totalSize==0) tvNoData.setVisibility(VISIBLE);
-                           else tvNoData.setVisibility(INVISIBLE);
-
-                       }catch(NumberFormatException | NullPointerException e){
-                           tvItemCount.setVisibility(INVISIBLE);
-                           tvNoData.setVisibility(VISIBLE);
-                           isLastPage = true;
-                       }
-                        tourFragment.addItems(tourItems);
-                    });
-                }
-//                catch (IOException | XmlPullParserException e) {
-//                    throw new RuntimeException(e);
-//                }
-                catch (Exception e) {
-                    Log.e("ROOM", Log.getStackTraceString(e));
-                }
-                finally {
-                    setLoading(false);
-                }
-
+                        "&arrange=C&eventStartDate=" + today;
+            }else{
+                address = BASE_URL + "areaBasedList2" + BASE_TYPE +
+                        "&contentTypeId=" + contentTypeId +
+                        "&lDongRegnCd=" + areaCode +
+                        "&arrange=O&pageNo="+currentPage;
             }
-        };
-        t.start(); // 자동으로 run() 영역 안에 코드가 수행됨(별도 Thread 직원객체에 의해)
-    }
 
-    private void setLoading(Boolean loading){
-        isLoading = loading;
-        progressBar.setVisibility(isLoading ? VISIBLE : INVISIBLE);
+            if(singunguCode != null)
+                address += "&lDongSignguCd="+singunguCode;
 
+            Log.d("url", address);
+
+            // api 요청
+            try {
+                XmlPullParser xpp = XmlParserUtil.getParser(address);
+                tourListParse(xpp, currentRequestId);
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+
+        });
     }
 
     // 스크롤 시 다음 장소 리스트 요청하기
     public void loadNextTouristPage(){
-
         if(isLoading) return;
         if(isLastPage) return;
         currentPage++;
@@ -363,21 +277,109 @@ public class MainActivity extends AppCompatActivity {
             query = tab.getText().toString();
         }
         loadContentData(query);
+    }
+
+    // tour list xml 파싱
+    private void tourListParse(XmlPullParser xpp, int currentRequestId) throws XmlPullParserException, IOException{
+        ArrayList<TourItem> tourItems = new ArrayList<>();
+        TourItem item = null;
+        String[] itemSize = new String[3]; // 0:numOfRows, 1:pageNo, 2:totalCount
+        int eventType = xpp.getEventType();
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            switch (eventType) {
+                case XmlPullParser.START_DOCUMENT:
+                    break;
+                case XmlPullParser.START_TAG:
+                    String tagName = xpp.getName();
+                    if (tagName.equals("item")) {
+                        item = new TourItem();
+                    } else if (tagName.equals("addr1")) {
+                        xpp.next();
+                        item.addr1 = xpp.getText();
+                    } else if (tagName.equals("contentid")) {
+                        xpp.next();
+                        item.contentId = xpp.getText();
+                    } else if (tagName.equals("contenttypeid")) {
+                        xpp.next();
+                        item.contentTypeId = xpp.getText();
+                    } else if (tagName.equals("title")) {
+                        xpp.next();
+                        item.title = xpp.getText();
+                    } else if (tagName.equals("firstimage")) {
+                        xpp.next();
+                        item.firstImage = xpp.getText();
+                    } else if (tagName.equals("lclsSystm1")) {
+                        xpp.next();
+                        item.lclsSystm1 = xpp.getText();
+                    } else if (tagName.equals("mapx")) {
+                        xpp.next();
+                        item.mapx = xpp.getText();
+                    } else if (tagName.equals("mapy")) {
+                        xpp.next();
+                        item.mapy = xpp.getText();
+                    } else if (tagName.equals("eventstartdate")) {
+                        xpp.next();
+                        item.eventStartDate = xpp.getText();
+                    } else if (tagName.equals("eventenddate")) {
+                        xpp.next();
+                        item.eventEndDate = xpp.getText();
+                    } else if(tagName.equals("numOfRows")){
+                        xpp.next();
+                        itemSize[0] = xpp.getText();
+                    } else if(tagName.equals("pageNo")){
+                        xpp.next();
+                        itemSize[1] = xpp.getText();
+                    } else if(tagName.equals("totalCount")){
+                        xpp.next();
+                        itemSize[2] = xpp.getText();
+                    }
+                    break;
+                case XmlPullParser.END_TAG:
+                    String tagNames = xpp.getName();
+                    if (tagNames.equals("item")) tourItems.add(item);
+                    if (Thread.currentThread().isInterrupted()) return; // 취소된 task인지 확인
+            }
+            eventType = xpp.next();
+        }
+        runOnUiThread(()->{
+            if(currentRequestId != requestId) return;
+            updateUI(tourItems, itemSize);
+        });
+    }
+
+    private void updateUI(ArrayList<TourItem> tourItems, String[] itemSize){
+        if (isFinishing() || isDestroyed()) return;
+        try{ // 화면에 아이템 개수 보이기
+            int currentSize = Integer.parseInt(itemSize[0])*Integer.parseInt(itemSize[1]);
+            int totalSize = Integer.parseInt(itemSize[2]);
+            if(currentSize >= totalSize) isLastPage = true;
+            tvItemCount.setText(currentSize + "/" + totalSize);
+            tvItemCount.setVisibility(VISIBLE);
+
+            if(totalSize==0) tvNoData.setVisibility(VISIBLE);
+            else tvNoData.setVisibility(INVISIBLE);
+
+        }catch(NumberFormatException | NullPointerException e){
+            tvItemCount.setVisibility(INVISIBLE);
+            tvNoData.setVisibility(VISIBLE);
+            isLastPage = true;
+        }
+        tourFragment.addItems(tourItems);
+        setLoading(false);
+    }
+
+
+    private void setLoading(Boolean loading){
+        isLoading = loading;
+        progressBar.setVisibility(isLoading ? VISIBLE : INVISIBLE);
 
     }
 
-    // 찜 등록 여부 확인
-    public void isBookmarked(String contentId, BookmarkCallback callback){
-        new Thread(()->{
-//            Log.d("ROOM", "contentId = " + contentId);
-           boolean result = bookmarkDao.isBookmarked(contentId);
-           // 콜백
-            new Handler(Looper.getMainLooper()).post(()->{
-                callback.onResult(result);
-            });
-        }).start();
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executor.shutdownNow();
     }
-
 
 
 }
