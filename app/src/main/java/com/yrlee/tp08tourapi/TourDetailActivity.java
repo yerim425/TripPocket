@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -17,8 +18,6 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -26,15 +25,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.facebook.shimmer.ShimmerFrameLayout;
-import com.google.android.material.appbar.CollapsingToolbarLayout;
 import com.yrlee.tp08tourapi.adapter.ImagePagerAdapter;
 import com.yrlee.tp08tourapi.adapter.TourDetailAdapter;
-import com.yrlee.tp08tourapi.data.TourDetailIntro;
 import com.yrlee.tp08tourapi.data.TourDetailIntroItem;
 import com.yrlee.tp08tourapi.data.TourDetailItem;
 import com.yrlee.tp08tourapi.data.TourDetailRecommendItem;
-import com.yrlee.tp08tourapi.data.TourItem;
+import com.yrlee.tp08tourapi.room.BookmarkManager;
+import com.yrlee.tp08tourapi.room.BookmarkRepository;
+import com.yrlee.tp08tourapi.room.BookmarkTour;
 import com.yrlee.tp08tourapi.util.Constants;
+import com.yrlee.tp08tourapi.util.DateUtil;
 import com.yrlee.tp08tourapi.util.XmlParserUtil;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -63,6 +62,7 @@ public class TourDetailActivity extends AppCompatActivity {
     private TextView tvOverview;
     private RecyclerView recyclerview;
     private ShimmerFrameLayout shimmerFrameLayout;
+    private CheckBox cbBookmark;
 
     // progress bar
     private ProgressBar progressBar;
@@ -88,6 +88,9 @@ public class TourDetailActivity extends AppCompatActivity {
     // 스레드를 여러개 생성하는 것을 방지
     private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
+    // bookmark repository
+    private BookmarkRepository bookmarkRepository;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,6 +101,9 @@ public class TourDetailActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        // bookmark repository
+        bookmarkRepository = new BookmarkRepository(this);
 
         // ui 초기화
         tvFailLoadData = findViewById(R.id.tv_fail_load_data);
@@ -110,6 +116,7 @@ public class TourDetailActivity extends AppCompatActivity {
         recyclerview = findViewById(R.id.recyclerview);
         tvOverview = findViewById(R.id.tv_overview);
         shimmerFrameLayout = findViewById(R.id.shimmer_layout);
+        cbBookmark = findViewById(R.id.cb_bookmark);
 
         // contentId 확인 후 tour 데이터 요청
         contentId = getIntent().getStringExtra("contentId");
@@ -132,6 +139,11 @@ public class TourDetailActivity extends AppCompatActivity {
         layoutAddress.setOnClickListener(v -> {
             openKakaoMap(tourItem.mapy, tourItem.mapx);
         });
+
+        // 북마크
+        // 체크 상태 설정
+        cbBookmark.setChecked(BookmarkManager.getInstance().isBookmarked(contentId));
+
     }
 
     // 1. 공통 정보 조회
@@ -149,12 +161,13 @@ public class TourDetailActivity extends AppCompatActivity {
                 throw new RuntimeException(e);
             }
 
+            // ui 업데이트
             runOnUiThread(this::updateCommonUI);
 
-            // 상세 소개 정보 조회
+            // 2. 상세 소개 정보 조회
             loadIntroData();
 
-            // 여행코스 리스트 조회
+            // 3. 여행코스 리스트 조회
             if ("25".equals(tourItem.contentTypeId)) {
                 loadRepeatData();
             }
@@ -219,7 +232,6 @@ public class TourDetailActivity extends AppCompatActivity {
     // 1.2 공통 정보 조회 - ui 업데이트
     private void updateCommonUI() {
         if (isFinishing() || isDestroyed()) return;
-        // ui 반영
         // 제목
         tvTitle.setText(tourItem.title);
 
@@ -231,21 +243,10 @@ public class TourDetailActivity extends AppCompatActivity {
         imagePagerAdapter = new ImagePagerAdapter(imageList);
         viewPager.setAdapter(imagePagerAdapter);
 
+        // 장소 소개
         tvOverview.setText(tourItem.overview.replaceAll("<br\\s*/?>", "\n"));
 
-        // layout visible
-        if (Objects.equals(tourItem.contentTypeId, "25")) {
-            layoutAddress.setVisibility(GONE);
-        } else {
-            layoutAddress.setVisibility(VISIBLE);
-            tvAddress.setText((tourItem.addr1));
-            if (tourItem.addr2 != null) {
-                tvSubAddress.setVisibility(VISIBLE);
-                tvSubAddress.setText(tourItem.addr2);
-            }
-        }
-
-        // tags
+        // layout visible, tags
         StringBuilder sb = new StringBuilder();
         String cat1 = Constants.CATEGORY1_MAP.get(tourItem.lclsSystm1);
         if (cat1 != null) sb.append(cat1);
@@ -289,6 +290,25 @@ public class TourDetailActivity extends AppCompatActivity {
         }
         tvTags.setText(sb.toString());
 
+        // 리스너 등록 - 찜 등록/해지 요청
+        cbBookmark.setVisibility(VISIBLE);
+        cbBookmark.setOnClickListener(v->{
+            if(cbBookmark.isChecked()){
+                BookmarkTour bt = new BookmarkTour();
+                bt.contentId = contentId;
+                bt.contentTypeId = tourItem.contentTypeId;
+                bt.title = tourItem.title;
+                bt.address = tourItem.addr1;
+                bt.firstImage = tourItem.firstImage;
+                bt.mapx = tourItem.mapx;
+                bt.mapy = tourItem.mapy;
+                bt.lclsSystm1 = tourItem.lclsSystm1;
+                bookmarkRepository.insert(bt);
+            }else{
+                bookmarkRepository.delete(contentId);
+            }
+        });
+
         setLoading(false);
     }
 
@@ -315,7 +335,6 @@ public class TourDetailActivity extends AppCompatActivity {
             }
 
             // ui
-
             runOnUiThread(this::updateIntroUI);
         });
 
@@ -385,23 +404,21 @@ public class TourDetailActivity extends AppCompatActivity {
 
                         } else if (tagName.equals("eventstartdate")) {
                             xpp.next();
-                            eventStartDate = formatDate(xpp.getText());
+                            eventStartDate = xpp.getText();
 
                         } else if (tagName.equals("eventenddate")) {
                             xpp.next();
-                            eventEndDate = formatDate(xpp.getText());
+                            eventEndDate = xpp.getText();
                         }
                         break;
                     case XmlPullParser.END_TAG:
                 }
                 eventType = xpp.next();
             }
-            if (eventStartDate != null && !eventStartDate.isEmpty()) {
-                String str = eventStartDate;
-                if (eventEndDate != null && !eventEndDate.isEmpty()) {
-                    str += " ~ " + eventEndDate;
-                }
-                introList.add(new TourDetailIntroItem("eventdate", str));
+            if(eventStartDate != null && !eventStartDate.isEmpty()){
+                introList.add(
+                        new TourDetailIntroItem("eventdate", DateUtil.getEventDate(eventStartDate, eventEndDate))
+                );
             }
             tourItem.introList = introList;
         }
@@ -448,7 +465,6 @@ public class TourDetailActivity extends AppCompatActivity {
             }
 
             // ui
-
             runOnUiThread(this::updateRepeatUI);
         });
     }
@@ -508,7 +524,7 @@ public class TourDetailActivity extends AppCompatActivity {
 
     }
 
-    // 값이 있는지 확인 후 추가
+    // 데이터가 있는지 확인 후 introList에 추가
     private void addIfNotEmpty(List<TourDetailIntroItem> list,
                                XmlPullParser xpp,
                                String title) throws IOException, XmlPullParserException {
@@ -521,15 +537,6 @@ public class TourDetailActivity extends AppCompatActivity {
         }
     }
 
-    // 날짜 변환 함수
-    private String formatDate(String date) {
-        if (date == null || date.length() != 8) {
-            return date;
-        }
-        return date.substring(0, 4) + "."
-                + date.substring(4, 6) + "."
-                + date.substring(6, 8);
-    }
 
     // 카카오맵 가기
     public void openKakaoMap(String latitude, String longitude) {

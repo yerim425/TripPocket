@@ -37,13 +37,14 @@
                     android:background="@drawable/bg_gradient"/>
                 <TextView
                     android:id="@+id/tv_name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="1. 광화문"
                     android:textColor="@color/white"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_gravity="end|bottom"
+                    android:gravity="end"
                     android:padding="32dp"/>
             </FrameLayout>
 

@@ -51,7 +51,8 @@ public class TourDetailAdapter extends RecyclerView.Adapter<RecyclerView.ViewHol
             ((VH_recommend)holder).tvName.setText((position + 1) + ". " + item.title);
             Glide.with(((VH_recommend)holder).ivImage)
                     .load(item.image)
-                    .placeholder(R.drawable.img_no_supported)
+                    .centerCrop()
+                    .placeholder(R.drawable.img_logo)
                     .into(((VH_recommend)holder).ivImage);
             ((VH_recommend)holder).tvOverview.setText(item.overview);
             ((VH_recommend)holder).cardview.setOnClickListener(v->{
