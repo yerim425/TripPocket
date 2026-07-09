@@ -25,6 +25,10 @@ public class TourFragment extends Fragment {
     RecyclerView recyclerView;
     TourAdapter tourAdapter;
     ArrayList<TourItem> tourItems = new ArrayList<>();
+    int currentSize = 0;
+    int currentPage = 1;
+    int totalSize = 0;
+    boolean isLastPage = false;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -74,4 +78,40 @@ public class TourFragment extends Fragment {
             tourAdapter.notifyItemRangeChanged(size, items.size());
         }
     }
+
+
+
+
+    public void setItemSize(int currentSize, int currentPage, int totalSize){
+        this.currentSize = this.currentSize + currentSize;
+        this.currentPage = currentPage;
+        this.totalSize = totalSize;
+        this.isLastPage = (currentSize >= totalSize);
+    }
+
+    public void setIsLastPage(boolean b){
+        this.isLastPage = b;
+    }
+
+    public void increasePage() {
+        this.currentPage++;
+    }
+
+    public int getCurrentSize(){
+        return this.currentSize;
+    }
+
+    public int getCurrentPage(){
+        return currentPage;
+    }
+    public boolean getIsLastPage(){
+        return isLastPage;
+    }
+
+    public int getTotalSize(){
+        return totalSize;
+    }
+
+
+
 }

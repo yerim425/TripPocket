@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -18,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.Fragment;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.tabs.TabLayout;
@@ -72,7 +74,12 @@ public class MainActivity extends AppCompatActivity {
     public Map<String, String> categoryMap = new HashMap<>(); // <카테고리 코드, 카테고리 이름>
 
     // 콘텐츠 별 프레그먼트
-    TourFragment tourFragment = null;
+    TourFragment tourFragment = null; // 12:관광지
+    TourFragment cultureFragment = null; // 14:문화시설
+    TourFragment festivalFragment = null; // 15:공연행사축제
+    TourFragment leportsFragment = null; // 24:레포츠
+    TourFragment recommendFragment = null; // 25:여행코스
+    TourFragment currentFragment = null;
 
     // 로딩 프로그래스 바
     ProgressBar progressBar;
@@ -84,10 +91,10 @@ public class MainActivity extends AppCompatActivity {
     TextView tvNoData;
 
     // 페이징
-    private int currentPage = 1;
+//    private int currentPage = 1;
     private boolean isLoading = false;
-    private boolean isLastPage = false;
-    private int totalCount = 0;
+//    private boolean isLastPage = false;
+    //private int totalCount = 0;
 
     // 찜 관리를 위한 RoomDB
     private AppDatabase db;
@@ -98,6 +105,8 @@ public class MainActivity extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private Future<?> currentTask;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,33 +169,63 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // fragment 초기화
+        tourFragment = new TourFragment();
+        currentFragment = tourFragment;
+        getSupportFragmentManager().beginTransaction().add(R.id.container, currentFragment).commit();
+
         // 검색 버튼 리스너
         findViewById(R.id.btn_search).setOnClickListener(v -> {
-            getSupportFragmentManager().beginTransaction().replace(R.id.container, tourFragment = new TourFragment()).commit();
-            currentPage = 1;
-            tvItemCount.setText("0/0");
-
-            String query = getString(R.string.tourist);
+            String tabName = getString(R.string.tourist);
             TabLayout.Tab tab = tabLayout.getTabAt(tabLayout.getSelectedTabPosition());
+//            TourFragment fragment = null;
             if(tab != null && tab.getText() != null){
-                query = tab.getText().toString();
+                tabName = tab.getText().toString();
+//                if(tabName.equals(getString(R.string.tourist))) fragment = tourFragment;
+//                else if(tabName.equals(getString(R.string.cultural_facilities))) fragment = cultureFragment;
+//                else if(tabName.equals(getString(R.string.festival))) fragment = festivalFragment;
+//                else if(tabName.equals(getString(R.string.leisure_sports))) fragment = leportsFragment;
+//                else if(tabName.equals(getString(R.string.travel_course))) fragment = recommendFragment;
             }
-            loadContentData(query);
+//            if(fragment == null) {
+//                fragment = new TourFragment();
+//            }
+            tourFragment = cultureFragment = festivalFragment = leportsFragment = recommendFragment = null;
+            currentFragment = new TourFragment();
+            getSupportFragmentManager().beginTransaction().replace(R.id.container, currentFragment).commit();
+            tvItemCount.setText("0/0");
+            loadContentData(tabName);
+
         });
 
         // 탭 레이아웃 설정
-        getSupportFragmentManager().beginTransaction().add(R.id.container, tourFragment = new TourFragment()).commit();
+
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
                 // 해당하는 콘텐츠의 데이터들 요청
                 String tabName = tab.getText().toString();
-                getSupportFragmentManager().beginTransaction().replace(R.id.container, tourFragment = new TourFragment()).commit();
-                // 선택된 탭으로 loadContentData
-                currentPage = 1;
-                tvItemCount.setText("0/0");
+                TourFragment fragment;
+                if(tabName.equals(getString(R.string.tourist))) fragment = tourFragment;
+                else if(tabName.equals(getString(R.string.cultural_facilities))) fragment = cultureFragment;
+                else if(tabName.equals(getString(R.string.festival))) fragment = festivalFragment;
+                else if(tabName.equals(getString(R.string.leisure_sports))) fragment = leportsFragment;
+                else if(tabName.equals(getString(R.string.travel_course))) fragment = recommendFragment;
+                else fragment = null;
 
-                loadContentData(tabName);
+                if(fragment == null) {
+                    currentFragment = new TourFragment();;
+                    tvItemCount.setText("0/0");
+                    getSupportFragmentManager().beginTransaction().replace(R.id.container, currentFragment).commit();
+                    loadContentData(tabName);
+                }else{
+                    currentFragment = fragment;
+                    tvItemCount.setText(currentFragment.getCurrentSize() + "/" + currentFragment.getTotalSize());
+                    if(currentFragment.getCurrentSize() == 0) tvNoData.setVisibility(VISIBLE);
+                    else tvNoData.setVisibility(INVISIBLE);
+                    getSupportFragmentManager().beginTransaction().replace(R.id.container, currentFragment).commit();
+                }
+
             }
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {}
@@ -218,6 +257,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadContentData(String contentTypeName) {
+        // 현재 페이지 가져오기
         final int currentRequestId = ++requestId;
         // 이전 작업 취소
         if (currentTask != null && !currentTask.isDone()) {
@@ -227,6 +267,7 @@ public class MainActivity extends AppCompatActivity {
         setLoading(true);
         String contentTypeId = Constants.CONTENT_TYPE_MAP.get(contentTypeName);
         Log.d("url", "contentTypeId: "+contentTypeId);
+        int currentPage = currentFragment.getCurrentPage();
         currentTask = executor.submit(() -> {
             String areaCode = Constants.SIDO_MAP.get(actvArea.getText().toString());
             String singunguCode = Objects.requireNonNull(Constants.SIGUNGU_MAP.get(areaCode)).get(actvAreaDetail.getText().toString());
@@ -236,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
                         .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
                 address = BASE_URL + "searchFestival2" + BASE_TYPE +
                         "&lDongRegnCd=" + areaCode +
-                        "&pageNo="+currentPage +
+                        "&pageNo="+currentPage+
                         "&arrange=C&eventStartDate=" + today;
             }else{
                 address = BASE_URL + "areaBasedList2" + BASE_TYPE +
@@ -265,9 +306,8 @@ public class MainActivity extends AppCompatActivity {
 
     // 스크롤 시 다음 장소 리스트 요청하기
     public void loadNextTouristPage(){
-        if(isLoading) return;
-        if(isLastPage) return;
-        currentPage++;
+        if(isLoading || currentFragment.getIsLastPage()) return;
+        currentFragment.increasePage();
 
         String query = getString(R.string.tourist);
         TabLayout.Tab tab = tabLayout.getTabAt(tabLayout.getSelectedTabPosition());
@@ -346,12 +386,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateUI(ArrayList<TourItem> tourItems, String[] itemSize){
+
         if (isFinishing() || isDestroyed()) return;
+
         try{ // 화면에 아이템 개수 보이기
-            int currentSize = Integer.parseInt(itemSize[0])*Integer.parseInt(itemSize[1]);
+            int currentSize = Integer.parseInt(itemSize[0]);
+            int currentPage = Integer.parseInt(itemSize[1]);
             int totalSize = Integer.parseInt(itemSize[2]);
-            if(currentSize >= totalSize) isLastPage = true;
-            tvItemCount.setText(currentSize + "/" + totalSize);
+            currentFragment.setItemSize(currentSize, currentPage, totalSize);
+//            if(currentSize >= totalSize) currentFragment.setIsLastPage(true);
+            tvItemCount.setText(currentFragment.getCurrentSize() + "/" + currentFragment.getTotalSize());
             tvItemCount.setVisibility(VISIBLE);
 
             if(totalSize==0) tvNoData.setVisibility(VISIBLE);
@@ -360,9 +404,18 @@ public class MainActivity extends AppCompatActivity {
         }catch(NumberFormatException | NullPointerException e){
             tvItemCount.setVisibility(INVISIBLE);
             tvNoData.setVisibility(VISIBLE);
-            isLastPage = true;
+            currentFragment.setIsLastPage(true);
         }
-        tourFragment.addItems(tourItems);
+        currentFragment.addItems(tourItems);
+        TabLayout.Tab tab = tabLayout.getTabAt(tabLayout.getSelectedTabPosition());
+        if(tab != null && tab.getText() != null){
+            String tabName = tab.getText().toString();
+            if(tabName.equals(getString(R.string.tourist))) tourFragment = currentFragment;
+            else if(tabName.equals(getString(R.string.cultural_facilities))) cultureFragment = currentFragment;
+            else if(tabName.equals(getString(R.string.festival))) festivalFragment = currentFragment;
+            else if(tabName.equals(getString(R.string.leisure_sports))) leportsFragment = currentFragment;
+            else if(tabName.equals(getString(R.string.travel_course))) recommendFragment = currentFragment;
+        }
         setLoading(false);
     }
 
