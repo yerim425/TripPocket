@@ -48,7 +48,7 @@
 - 여행코스 목록을 볼 수 있다.
 <p>
   <img src="images/recommend01_1.jpg" width="200">
-  <img src="images/recommend01_2.jgp" width="200">
+  <img src="images/recommend01_2.jpg" width="200">
 </p>
 
 ### 3) 북마크 등록/해지
