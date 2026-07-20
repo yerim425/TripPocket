@@ -22,10 +22,10 @@
 - 무한 스크롤 페이징 구현
 
 ## 와이어프레임 / 시스템 구조도
-<img src="images/wireframe_structure.png" width="300">
+<img src="images/wireframe_structure.png" width="500">
 
 ## UI Flow
-<img src="images/ui_flow.png" width="300">
+<img src="images/ui_flow.png" width="500">
 
 ## 주요기능
 ### 1) 지역 기반 검색
